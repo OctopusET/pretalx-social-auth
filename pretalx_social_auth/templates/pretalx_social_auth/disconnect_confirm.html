@@ -1,0 +1,23 @@
+{% load i18n %}
+<!DOCTYPE html>
+<html>
+<head><title>{% translate "Disconnect Account" %}</title></head>
+<body>
+    <h2>{% translate "Disconnect Account" %}</h2>
+    <p>
+        {% blocktranslate with provider=provider_name %}
+            Are you sure you want to disconnect your {{ provider }} account?
+        {% endblocktranslate %}
+    </p>
+    <form method="post"
+          {% if association_id %}
+              action="{% url "plugins:pretalx_social_auth:disconnect_individual" backend association_id %}"
+          {% else %}
+              action="{% url "plugins:pretalx_social_auth:disconnect" backend %}"
+          {% endif %}>
+        {% csrf_token %}
+        <button type="submit">{% translate "Disconnect" %}</button>
+        <a href="javascript:history.back()">{% translate "Cancel" %}</a>
+    </form>
+</body>
+</html>

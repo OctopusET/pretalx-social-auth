@@ -1,11 +1,10 @@
 # pretalx Social Auth plugin
 
-> [!CAUTION]
-> This plugin is still under development and not ready for production use. It also uses signals currently only existing in [my fork of pretalx](https://github.com/adamskrz/pretalx/tree/social-auth)
+This is a plugin for [pretalx](https://github.com/pretalx/pretalx) that integrates with [Python Social Auth](https://github.com/python-social-auth/social-core), allowing users to log in with third-party services (SSO/OAuth/OIDC).
 
-This is a plugin for [pretalx](https://github.com/pretalx/pretalx). It provides an integration with [Python Social Auth](https://github.com/python-social-auth/social-core), allowing users to log in with third-party services.
+Based on [social_django](https://github.com/python-social-auth/social-app-django), with deprecated features removed and pretalx-specific settings added.
 
-Originally based on [social_django](https://github.com/python-social-auth/social-app-django) from the Python Social Auth project, but with the removal of deprecated features and the addition of pretalx-specific settings.
+Requires pretalx 2025.1.0 or later (which includes the auth plugin signals from [PR #1931](https://github.com/pretalx/pretalx/pull/1931)).
 
 ## Screenshots
 
@@ -13,14 +12,24 @@ Originally based on [social_django](https://github.com/python-social-auth/social
 
 ## Configuration
 
-In your `pretalx.cfg` file, add all the auth backends you need as a comma-separated list. Then, add the backend-specific settings to the `[plugin:pretalx_social_auth]` section. You can find the backend name and required settings in the [python-social-auth documentation](https://python-social-auth.readthedocs.io/en/latest/backends/index.html).
+In your `pretalx.cfg` file, add the auth backends you need as a comma-separated list under `[authentication]`. Then add the backend-specific settings to the `[plugin:pretalx_social_auth]` section.
 
-Example:
+You can find backend names and required settings in the [python-social-auth documentation](https://python-social-auth.readthedocs.io/en/latest/backends/index.html).
+
+### Example: GitHub OAuth
 
 ```ini
-[project.entry-points."pretalx.plugin"]
-pretalx_social_auth = "pretalx_social_auth:PretalxPluginMeta"
+[authentication]
+additional_auth_backends=social_core.backends.github.GithubOAuth2
 
+[plugin:pretalx_social_auth]
+SOCIAL_AUTH_GITHUB_KEY=your-github-client-id
+SOCIAL_AUTH_GITHUB_SECRET=your-github-client-secret
+```
+
+### Example: Microsoft + OpenID
+
+```ini
 [authentication]
 additional_auth_backends=social_core.backends.microsoft.MicrosoftOAuth2,social_core.backends.open_id.OpenIdAuth
 
@@ -29,11 +38,44 @@ SOCIAL_AUTH_MICROSOFT_GRAPH_KEY=xxxxx-xxxxx-xxxxx-xxxxx-xxxxxxxxxx
 SOCIAL_AUTH_MICROSOFT_GRAPH_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
-Instructions on adding custom backends will be added in the future.
+### Example: Keycloak OIDC
 
-Due to how Social Auth is configured with API keys in `settings.py`, this doesn't support configuring providers (backends) on a per-event basis. This means particular care should be taken where custom event domains are in use, as some providers require a different API key per domain (or adding valid redirect URLs).
+```ini
+[authentication]
+additional_auth_backends=social_core.backends.keycloak.KeycloakOAuth2
 
-I initially looked into using [django-allauth](https://github.com/pennersr/django-allauth) instead, which allows configuring providers in the database on a per-site basis, but it also replaces the full auth model, so would be more difficult to make into a plugin!
+[plugin:pretalx_social_auth]
+SOCIAL_AUTH_KEYCLOAK_KEY=your-client-id
+SOCIAL_AUTH_KEYCLOAK_SECRET=your-client-secret
+SOCIAL_AUTH_KEYCLOAK_PUBLIC_KEY=your-realm-public-key
+SOCIAL_AUTH_KEYCLOAK_AUTHORIZATION_URL=https://keycloak.example.com/realms/your-realm/protocol/openid-connect/auth
+SOCIAL_AUTH_KEYCLOAK_ACCESS_TOKEN_URL=https://keycloak.example.com/realms/your-realm/protocol/openid-connect/token
+```
+
+### Supported providers
+
+Any backend supported by [python-social-auth](https://python-social-auth.readthedocs.io/en/latest/backends/index.html) should work. Common ones include:
+
+- GitHub, GitLab, Bitbucket
+- Google, Microsoft/Azure AD
+- Keycloak, Auth0, Okta
+- Discord, Slack
+- Apple, Facebook, Twitter/X, LinkedIn
+- Generic OpenID Connect, SAML
+
+### Settings reference
+
+The following settings can be set in `[plugin:pretalx_social_auth]`:
+
+- **Backend credentials**: `SOCIAL_AUTH_<BACKEND>_KEY` and `SOCIAL_AUTH_<BACKEND>_SECRET` for each provider.
+- **`BACKEND_NAME_MAPPING`**: Override display names for providers on login buttons (default names are provided for common backends).
+- **`LOGIN_REDIRECT_URL`**: Where to redirect after successful login (default: `/`).
+- **`DISCONNECT_REDIRECT_URL`**: Where to redirect after disconnecting a provider (default: `/`).
+- **`LOGIN_ERROR_URL`**: Where to redirect on auth errors (default: `/`).
+
+### Limitations
+
+- Provider configuration is **instance-wide** (not per-event). API keys are set in `pretalx.cfg`, not in the database. This means care should be taken with custom event domains, as some providers (e.g., Microsoft) require different redirect URIs per domain.
 
 ## Development setup
 

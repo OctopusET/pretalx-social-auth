@@ -2,6 +2,9 @@
 {% if backends|length > 0 %}
     <hr>
     {% for backend, friendly in backends.items %}
-        <a class="btn btn-lg btn-info btn-block" href="{% url "plugins:pretalx_social_auth:begin" backend %}{{ url_params }}">Sign in with {{ friendly }}</a>
+        <a class="btn btn-lg btn-outline-info w-100 mb-2"
+           href="{% url "plugins:pretalx_social_auth:begin" backend %}{{ url_params }}">
+            {% blocktranslate with provider=friendly %}Sign in with {{ provider }}{% endblocktranslate %}
+        </a>
     {% endfor %}
 {% endif %}

@@ -1,16 +1,13 @@
 {% load i18n %}
-<div>
-    <h4>{% translate "Social Login Connections" %}</h4>
-
-    {% for provider, connection in associated_accounts %}
-        <div class="row">
-
-            Connected to {{ provider }}
-            <div class="col-md-4 flip ml-auto">
-                <a class="btn btn-block btn-danger btn-lg">
-                    Disconnect
-                </a>
-            </div>
-        </div>
-    {% endfor %}
-</div>
+<h2>{% translate "Social Login Connections" %}</h2>
+{% for account in associated_accounts %}
+    <div class="d-flex align-items-center justify-content-between mb-2">
+        <span>
+            {% blocktranslate with provider=account.provider_name %}Connected to {{ provider }}{% endblocktranslate %}
+        </span>
+        <a class="btn btn-danger btn-sm"
+           href="{% url "plugins:pretalx_social_auth:disconnect_individual" account.backend account.id %}">
+            {% translate "Disconnect" %}
+        </a>
+    </div>
+{% endfor %}

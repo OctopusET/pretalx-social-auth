@@ -1,46 +1,17 @@
-from django.contrib import messages
 from django.contrib.auth import REDIRECT_FIELD_NAME, login
 from django.contrib.auth.decorators import login_required
-from django.utils.translation import gettext_lazy as _
+from django.shortcuts import render
 from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_exempt, csrf_protect
-from django.views.decorators.http import require_POST
-from django.views.generic import FormView
-from pretalx.common.views.mixins import PermissionRequired
 from social_core.actions import do_auth, do_complete, do_disconnect
 
-from .forms import SocialAuthSettingsForm
-from .utils import maybe_require_post, psa
+from .utils import backend_friendly_name, maybe_require_post, psa
 
 NAMESPACE = "plugins:pretalx_social_auth"
 
 # Calling `session.set_expiry(None)` results in a session lifetime equal to
 # platform default session lifetime.
 DEFAULT_SESSION_TIMEOUT = None
-
-
-class SocialAuthSettingsView(PermissionRequired, FormView):
-    permission_required = "orga.change_settings"
-    template_name = "pretalx_social_auth/settings.html"
-    form_class = SocialAuthSettingsForm
-
-    def get_success_url(self):
-        return self.request.path
-
-    def get_object(self):
-        return self.request.event
-
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        kwargs["event"] = self.request.event
-        return kwargs
-
-    def form_valid(self, form):
-        form.save()
-        messages.success(
-            self.request, _("The pretalx Social Auth plugin settings were updated.")
-        )
-        return super().form_valid(form)
 
 
 @never_cache
@@ -69,13 +40,35 @@ def complete(request, backend, *args, **kwargs):
 @never_cache
 @login_required
 @psa()
-@require_POST
 @csrf_protect
 def disconnect(request, backend, association_id=None):
-    """Disconnects given backend from current logged in user."""
-    return do_disconnect(
-        request.backend, request.user, association_id, redirect_name=REDIRECT_FIELD_NAME
-    )
+    """Disconnects given backend from current logged in user.
+
+    GET shows a confirmation page, POST executes the disconnect.
+    """
+    if request.method == "POST":
+        return do_disconnect(
+            request.backend,
+            request.user,
+            association_id,
+            redirect_name=REDIRECT_FIELD_NAME,
+        )
+
+    # GET: show confirmation page
+    from .models import UserSocialAuth
+
+    context = {
+        "backend": backend,
+        "association_id": association_id,
+        "provider_name": backend_friendly_name(backend),
+    }
+    if association_id:
+        assoc = UserSocialAuth.objects.filter(
+            id=association_id, user=request.user
+        ).first()
+        if assoc:
+            context["provider_name"] = backend_friendly_name(assoc.provider)
+    return render(request, "pretalx_social_auth/disconnect_confirm.html", context)
 
 
 def get_session_timeout(

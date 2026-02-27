@@ -1,5 +1,3 @@
-from typing import Union
-
 from django.conf import settings
 from django.db import models
 from django.db.utils import IntegrityError
@@ -33,15 +31,6 @@ ASSOCIATION_HANDLE_LENGTH = getattr(
 )
 
 
-class SocialAuthSettings(models.Model):
-    event = models.OneToOneField(
-        to="event.Event",
-        on_delete=models.CASCADE,
-        related_name="pretalx_social_auth_settings",
-    )
-    some_setting = models.CharField(max_length=10, default="A")
-
-
 class AbstractUserSocialAuth(models.Model, DjangoUserMixin):
     """Abstract Social Auth association model"""
 
@@ -62,7 +51,7 @@ class AbstractUserSocialAuth(models.Model, DjangoUserMixin):
         abstract = True
 
     @classmethod
-    def get_social_auth(cls, provider: str, uid: Union[str, int]):
+    def get_social_auth(cls, provider: str, uid: str | int):
         if not isinstance(uid, str):
             uid = str(uid)
         for social in cls.objects.select_related("user").filter(

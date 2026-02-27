@@ -2,7 +2,7 @@
 name = "pretalx-social-auth"
 dynamic = ["version"]
 description = "pretalx plugin for Python Social Auth"
-readme = "README.rst"
+readme = "README.md"
 license = {text = "Apache Software License"}
 keywords = ["pretalx"]
 authors = [
